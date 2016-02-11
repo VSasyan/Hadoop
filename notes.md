@@ -1,4 +1,4 @@
 Notes
 =====
 
-http://www.michael-noll.com/tutorials/running-hadoop-on-ubuntu-linux-multi-node-cluster/
+http://pingax.com/install-apache-hadoop-ubuntu-cluster-setup/
