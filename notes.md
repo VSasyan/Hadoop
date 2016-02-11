@@ -1,4 +1,4 @@
 Notes
 =====
 
-http://mbaron.developpez.com/tutoriels/bigdata/hadoop/introduction-hdfs-map-reduce/
+http://www.michael-noll.com/tutorials/running-hadoop-on-ubuntu-linux-multi-node-cluster/
