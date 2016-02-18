@@ -97,7 +97,7 @@ public class WikiLongestArticle {
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(LongWritable.class);
 		job.setReducerClass(DocumentLengthSumReducer.class);
-		job.setNumReduceTasks(4);
+		job.setNumReduceTasks(1);
 
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
 	}
