@@ -18,11 +18,8 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.mahout.text.wikipedia.XmlInputFormat;
 
 public class WikiLongestArticle {
-	static long maxLength = 0;
-	static Text maxKey = new Text();
 
-	public static class FirstTitleLetterMapper extends
-			Mapper<Object, Text, Text, IntWritable> {
+	public static class WikiLongestArticleMapper extends Mapper<Object, Text, Text, IntWritable> {
 
 		private static final String START_DOC = "<text xml:space=\"preserve\">";
 		private static final String END_DOC = "</text>";
@@ -55,8 +52,10 @@ public class WikiLongestArticle {
 
 	}
 
-	public static class DocumentLengthSumReducer extends
-			Reducer<Text, IntWritable, Text, LongWritable> {
+	public static class WikiLongestArticleReducer extends Reducer<Text, IntWritable, Text, LongWritable> {
+		
+		long maxLength = 0;
+		Text maxKey = new Text();
 
 		public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 
@@ -87,7 +86,7 @@ public class WikiLongestArticle {
 		// Input / Mapper
 		FileInputFormat.addInputPath(job, new Path(args[0]));
 		job.setInputFormatClass(XmlInputFormat.class);
-		job.setMapperClass(FirstTitleLetterMapper.class);
+		job.setMapperClass(WikiLongestArticleMapper.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(IntWritable.class);
 
@@ -96,7 +95,7 @@ public class WikiLongestArticle {
 		job.setOutputFormatClass(TextOutputFormat.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(LongWritable.class);
-		job.setReducerClass(DocumentLengthSumReducer.class);
+		job.setReducerClass(WikiLongestArticleReducer.class);
 		job.setNumReduceTasks(1);
 
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
