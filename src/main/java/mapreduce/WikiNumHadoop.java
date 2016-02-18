@@ -8,6 +8,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -21,12 +22,13 @@ import com.google.common.collect.Iterables;
 
 public class WikiNumHadoop {
 
-	public static class WikiNumHadoopMapper extends Mapper<Object, Text, Text, IntWritable> {
+	public static class WikiNumHadoopMapper extends Mapper<Object, Text, NullWritable, IntWritable> {
 
 		private static final String START_DOC = "<text xml:space=\"preserve\">";
 		private static final String END_DOC = "</text>";
 		private static final Pattern TITLE = Pattern.compile("<title>(.*)<\\/title>");
-		private static final Text myKey = new Text("key");
+		//private static final Text myKey = new Text("key");
+		private static final NullWritable nullKey = null;
 		private static final IntWritable One = new IntWritable(1);
 
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
@@ -38,7 +40,7 @@ public class WikiNumHadoop {
 			String toFind = new String("hadoop");
 			
 			if (title.indexOf(toFind) != -1 || document.indexOf(toFind) != -1) {
-				context.write(myKey, One);
+				context.write(nullKey, One);
 			}
 		}
 
@@ -88,7 +90,7 @@ public class WikiNumHadoop {
 		// Output / Reducer
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 		job.setOutputFormatClass(TextOutputFormat.class);
-		job.setOutputKeyClass(Text.class);
+		job.setOutputKeyClass(NullWritable.class);
 		job.setOutputValueClass(LongWritable.class);
 		job.setReducerClass(WikiNumHadoopReducer.class);
 		job.setNumReduceTasks(1);
