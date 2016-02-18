@@ -28,7 +28,7 @@ public class WikiNumHadoop {
 		private static final String END_DOC = "</text>";
 		private static final Pattern TITLE = Pattern.compile("<title>(.*)<\\/title>");
 		//private static final Text myKey = new Text("key");
-		private static final NullWritable nullKey = null;
+		private static final NullWritable nullKey = NullWritable.get();
 		private static final IntWritable One = new IntWritable(1);
 
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
@@ -84,13 +84,13 @@ public class WikiNumHadoop {
 		FileInputFormat.addInputPath(job, new Path(args[0]));
 		job.setInputFormatClass(XmlInputFormat.class);
 		job.setMapperClass(WikiNumHadoopMapper.class);
-		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputKeyClass(NullWritable.class);
 		job.setMapOutputValueClass(IntWritable.class);
 
 		// Output / Reducer
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 		job.setOutputFormatClass(TextOutputFormat.class);
-		job.setOutputKeyClass(NullWritable.class);
+		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(LongWritable.class);
 		job.setReducerClass(WikiNumHadoopReducer.class);
 		job.setNumReduceTasks(1);
