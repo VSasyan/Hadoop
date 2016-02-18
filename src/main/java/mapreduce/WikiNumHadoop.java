@@ -63,7 +63,10 @@ public class WikiNumHadoop {
 
 		public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 
-			number.set(number.get() + Iterables.size(values));
+			//number.set(number.get() + Iterables.size(values));
+			for (IntWritable occurences : values) {
+				number.set(number.get() + occurences.get());
+			}
 		}
 		
 		public void cleanup(Context context) throws IOException, InterruptedException{
