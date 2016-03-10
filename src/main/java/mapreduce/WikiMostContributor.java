@@ -2,6 +2,8 @@
 package mapreduce;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -13,6 +15,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -20,53 +23,56 @@ import org.apache.mahout.text.wikipedia.XmlInputFormat;
 
 import com.google.common.collect.Iterables;
 
-public class WikiNumHadoop {
+public class WikiMostContributor {
 
-	public static class WikiNumHadoopMapper extends Mapper<Object, Text, Text, IntWritable> {
+	public static class WikiMostContributorMapper extends Mapper<Object, Text, Text, IntWritable> {
 
-		private static final String START_DOC = "<text xml:space=\"preserve\">";
-		private static final String END_DOC = "</text>";
-		private static final Pattern TITLE = Pattern.compile("<title>(.*)<\\/title>");
-		private static final Text myKey = new Text("key");
+		private static final Pattern USERNAME = Pattern.compile("<username>(.*)<\\/username>");
+		private static final Text myKey = new Text("");
 		private static final IntWritable One = new IntWritable(1);
 
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 
 			String articleXML = value.toString();
 
-			String title = getTitle(articleXML).toLowerCase();
-			String document = getDocument(articleXML).toLowerCase();
-			String toFind = new String("hadoop");
+			List<String> usernames = getUsernames(articleXML);
 			
-			if (title.indexOf(toFind) != -1 || document.indexOf(toFind) != -1) {
+			for (int i = 0; i < usernames.size(); i++) {
+				myKey.set(usernames.get(i));
 				context.write(myKey, One);
 			}
 		}
 
-		private static String getDocument(String xml) {
-			int start = xml.indexOf(START_DOC) + START_DOC.length();
-			int end = xml.indexOf(END_DOC, start);
-			return start < end ? xml.substring(start, end) : "";
-		}
-
-		private static String getTitle(CharSequence xml) {
-			Matcher m = TITLE.matcher(xml);
-			return m.find() ? m.group(1) : "";
+		private static List<String> getUsernames(CharSequence xml) {
+			Matcher m = USERNAME.matcher(xml);
+			List<String> matches = new ArrayList<String>();
+			while(m.find()){
+			    matches.add(m.group(1));
+			}
+			return matches;
 		}
 
 	}
 
-	public static class WikiNumHadoopReducer extends Reducer<Text, IntWritable, Text, LongWritable> {
-		
-		LongWritable number = new LongWritable(0);
+	public static class WikiMostContributorReducer extends Reducer<Text, IntWritable, Text, LongWritable> {
 
+		long maxContributions = 0;
+		Text mostContributor = new Text();
+		
 		public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 
-			number.set(number.get() + Iterables.size(values));
+			long totalContributions = 0;
+			for (IntWritable contributions : values) {
+				totalContributions += contributions.get();
+			}
+			if (totalContributions > maxContributions) {
+				mostContributor.set(key);
+				maxContributions = totalContributions;
+			}
 		}
 		
 		public void cleanup(Context context) throws IOException, InterruptedException{
-			context.write(new Text("Number of occurences of `hadoop` : "), number);
+			context.write(mostContributor, new LongWritable(maxContributions));
 		}
 	}
 
@@ -76,13 +82,13 @@ public class WikiNumHadoop {
 		conf.set(XmlInputFormat.START_TAG_KEY, "<page>");
 		conf.set(XmlInputFormat.END_TAG_KEY, "</page>");
 
-		Job job = Job.getInstance(conf, "WikiNumHadoop");
+		Job job = Job.getInstance(conf, "WikiMostContributor");
 		job.setJarByClass(WikiLongestArticle.class);
 
 		// Input / Mapper
 		FileInputFormat.addInputPath(job, new Path(args[0]));
 		job.setInputFormatClass(XmlInputFormat.class);
-		job.setMapperClass(WikiNumHadoopMapper.class);
+		job.setMapperClass(WikiMostContributorMapper.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(IntWritable.class);
 
@@ -91,7 +97,7 @@ public class WikiNumHadoop {
 		job.setOutputFormatClass(TextOutputFormat.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(LongWritable.class);
-		job.setReducerClass(WikiNumHadoopReducer.class);
+		job.setReducerClass(WikiMostContributorReducer.class);
 		job.setNumReduceTasks(1);
 
 		System.exit(job.waitForCompletion(true) ? 0 : 1);

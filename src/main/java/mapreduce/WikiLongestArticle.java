@@ -65,9 +65,7 @@ public class WikiLongestArticle {
 					maxKey.set(key);					
 				}
 			}
-			//context.write(maxKey, new LongWritable(maxLength));
 		}
-
 		
 		public void cleanup(Context context) throws IOException, InterruptedException{
 			context.write(maxKey, new LongWritable(maxLength));
