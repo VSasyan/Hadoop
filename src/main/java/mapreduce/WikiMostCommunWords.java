@@ -3,7 +3,6 @@ package mapreduce;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
@@ -18,13 +17,11 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.mahout.text.wikipedia.XmlInputFormat;
 
-import com.google.common.collect.Iterables;
 
 public class WikiMostCommunWords {
 
@@ -33,7 +30,7 @@ public class WikiMostCommunWords {
 		private static final String START_DOC = "<text xml:space=\"preserve\">";
 		private static final String END_DOC = "</text>";
 		private static final Pattern TITLE = Pattern.compile("<title>(.*)<\\/title>");
-		private static final String WORD = "[a-zA-Z]+(-?[a-zA-Z]+)";
+		private static final String WORD = "[a-zA-Z]+(-[a-zA-Z]+)?";
 
 		private static final Text myKey = new Text("");
 		private static final IntWritable One = new IntWritable(1);
@@ -75,20 +72,21 @@ public class WikiMostCommunWords {
 		
 		TreeMap<Long, ArrayList<String>> treeMap = new TreeMap<Long, ArrayList<String>>();
 		
-		public void reduce(ArrayList<String> key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+		public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 
 			long totalOccurences = 0;
 			for (IntWritable occurences : values) {
 				totalOccurences += occurences.get();
 			}
+			
 			ArrayList<String> list = treeMap.get(totalOccurences);
 			if (list == null) {
 				list = new ArrayList<String>();
-				treeMap.put(totalOccurences, key);
+				treeMap.put(totalOccurences, list);
 			}
 			
-			// add to TreeMap
-			treeMap.put(totalOccurences, key);
+			// add to list
+			list.add(key.toString());
 			
 			if (treeMap.size() > 100) {
 				treeMap.remove(treeMap.firstEntry().getKey());
