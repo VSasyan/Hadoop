@@ -1,3 +1,4 @@
+
 package mapreduce;
 
 import java.io.IOException;
@@ -8,7 +9,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -22,13 +22,12 @@ import com.google.common.collect.Iterables;
 
 public class WikiNumHadoop {
 
-	public static class WikiNumHadoopMapper extends Mapper<Object, Text, NullWritable, IntWritable> {
+	public static class WikiNumHadoopMapper extends Mapper<Object, Text, Text, IntWritable> {
 
 		private static final String START_DOC = "<text xml:space=\"preserve\">";
 		private static final String END_DOC = "</text>";
 		private static final Pattern TITLE = Pattern.compile("<title>(.*)<\\/title>");
-		//private static final Text myKey = new Text("key");
-		private static final NullWritable nullKey = NullWritable.get();
+		private static final Text myKey = new Text("key");
 		private static final IntWritable One = new IntWritable(1);
 
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
@@ -40,7 +39,7 @@ public class WikiNumHadoop {
 			String toFind = new String("hadoop");
 			
 			if (title.indexOf(toFind) != -1 || document.indexOf(toFind) != -1) {
-				context.write(nullKey, One);
+				context.write(myKey, One);
 			}
 		}
 
@@ -63,10 +62,7 @@ public class WikiNumHadoop {
 
 		public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 
-			//number.set(number.get() + Iterables.size(values));
-			for (IntWritable occurences : values) {
-				number.set(number.get() + occurences.get());
-			}
+			number.set(number.get() + Iterables.size(values));
 		}
 		
 		public void cleanup(Context context) throws IOException, InterruptedException{
@@ -87,7 +83,7 @@ public class WikiNumHadoop {
 		FileInputFormat.addInputPath(job, new Path(args[0]));
 		job.setInputFormatClass(XmlInputFormat.class);
 		job.setMapperClass(WikiNumHadoopMapper.class);
-		job.setMapOutputKeyClass(NullWritable.class);
+		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(IntWritable.class);
 
 		// Output / Reducer
