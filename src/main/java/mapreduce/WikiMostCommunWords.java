@@ -73,13 +73,18 @@ public class WikiMostCommunWords {
 
 	public static class WikiMostCommunWordsReducer extends Reducer<Text, IntWritable, Text, LongWritable> {
 		
-		TreeMap<Long, Text> treeMap = new TreeMap<Long, Text>();
+		TreeMap<Long, ArrayList<String>> treeMap = new TreeMap<Long, ArrayList<String>>();
 		
-		public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+		public void reduce(ArrayList<String> key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 
 			long totalOccurences = 0;
 			for (IntWritable occurences : values) {
 				totalOccurences += occurences.get();
+			}
+			ArrayList<String> list = treeMap.get(totalOccurences);
+			if (list == null) {
+				list = new ArrayList<String>();
+				treeMap.put(totalOccurences, key);
 			}
 			
 			// add to TreeMap
@@ -93,8 +98,8 @@ public class WikiMostCommunWords {
 		
 		public void cleanup(Context context) throws IOException, InterruptedException{
 		
-			for (Entry<Long, Text> entry : treeMap.descendingMap().entrySet()) {
-				context.write(entry.getValue(), new LongWritable(entry.getKey()));
+			for (Entry<Long, ArrayList<String>> entry : treeMap.descendingMap().entrySet()) {
+				context.write(new Text(entry.getValue().toString()), new LongWritable(entry.getKey()));
 			}
 		}
 	}
