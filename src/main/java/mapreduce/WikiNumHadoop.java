@@ -68,6 +68,7 @@ public class WikiNumHadoop {
 		public void cleanup(Context context) throws IOException, InterruptedException{
 			context.write(new Text("Number of occurences of `hadoop` : "), number);
 		}
+		
 	}
 
 	public static void main(String[] args) throws Exception {
