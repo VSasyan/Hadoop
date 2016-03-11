@@ -22,6 +22,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.mahout.text.wikipedia.XmlInputFormat;
 
+import com.sun.tools.javac.util.Log;
+
 
 public class WikiMostCommunWords {
 
@@ -44,7 +46,7 @@ public class WikiMostCommunWords {
 			
 			String all = title + ' ' + document;
 			
-			StringTokenizer itr = new StringTokenizer (all.toString(), " \t\n\r\f,.:;?![]'");
+			StringTokenizer itr = new StringTokenizer (all.toString(), " \t\n\r\f,.:;?![]|'");
 			
 			while (itr.hasMoreTokens()) {
 				String word = itr.nextToken();
@@ -104,6 +106,29 @@ public class WikiMostCommunWords {
 	
 	public static class WikiMostCommunWordsMapper2 extends Mapper<Object, Text, Text, IntWritable> {
 		
+		TreeMap<Long, ArrayList<String>> treeMap = new TreeMap<Long, ArrayList<String>>();
+		
+		public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+
+			long totalOccurences = 0;
+			for (IntWritable occurences : values) {
+				totalOccurences += occurences.get();
+			}
+			
+			ArrayList<String> list = treeMap.get(totalOccurences);
+			if (list == null) {
+				list = new ArrayList<String>();
+				treeMap.put(totalOccurences, list);
+			}
+			
+			// add to list
+			list.add(key.toString());
+			
+			if (treeMap.size() > 100) {
+				treeMap.remove(treeMap.firstEntry().getKey());
+			}
+			
+		}
 	}
 	
 	public static class WikiMostCommunWordsReducer2 extends Reducer<Text, IntWritable, Text, LongWritable> {
@@ -116,7 +141,7 @@ public class WikiMostCommunWords {
 		conf.set(XmlInputFormat.START_TAG_KEY, "<page>");
 		conf.set(XmlInputFormat.END_TAG_KEY, "</page>");
 
-		Job job = Job.getInstance(conf, "WikiMostCommunWords");
+		Job job = Job.getInstance(conf, "1_WikiMostCommunWords_1");
 		job.setJarByClass(WikiLongestArticle.class);
 
 		// Input / Mapper
@@ -132,26 +157,34 @@ public class WikiMostCommunWords {
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(LongWritable.class);
 		job.setReducerClass(WikiMostCommunWordsReducer.class);
-		job.setNumReduceTasks(20);
+		job.setNumReduceTasks(36);
+		
+		if (job.waitForCompletion(true)) {
+			
+			// Merge the files
+			String cmd = "bin/hdfs dfs -getmerge " + (new Path(args[1])).toUri() + " " + (new Path(args[2])).toUri();
+			org.apache.hadoop.util.Shell.execCommand(cmd);
+			
+			Job job2 = Job.getInstance(conf, "2_WikiMostCommunWords_2");
+			job2.setJarByClass(WikiLongestArticle.class);
 
-		/*Job job2 = Job.getInstance(conf, "2_WikiMostCommunWords_2");
-		job2.setJarByClass(WikiLongestArticle.class);
+			// Input / Mapper
+			FileInputFormat.addInputPath(job2, new Path(args[1]));
+			job2.setInputFormatClass(XmlInputFormat.class);
+			job2.setMapperClass(WikiMostCommunWordsMapper2.class);
+			job2.setMapOutputKeyClass(Text.class);
+			job2.setMapOutputValueClass(IntWritable.class);
 
-		// Input / Mapper
-		FileInputFormat.addInputPath(job2, new Path(args[1]));
-		job2.setInputFormatClass(XmlInputFormat.class);
-		job2.setMapperClass(WikiMostCommunWordsMapper2.class);
-		job2.setMapOutputKeyClass(Text.class);
-		job2.setMapOutputValueClass(IntWritable.class);
+			// Output / Reducer
+			FileOutputFormat.setOutputPath(job2, new Path(args[2]));
+			job2.setOutputFormatClass(TextOutputFormat.class);
+			job2.setOutputKeyClass(Text.class);
+			job2.setOutputValueClass(LongWritable.class);
+			job2.setReducerClass(WikiMostCommunWordsReducer2.class);
+			job2.setNumReduceTasks(4);
 
-		// Output / Reducer
-		FileOutputFormat.setOutputPath(job2, new Path(args[1]));
-		job2.setOutputFormatClass(TextOutputFormat.class);
-		job2.setOutputKeyClass(Text.class);
-		job2.setOutputValueClass(LongWritable.class);
-		job2.setReducerClass(WikiMostCommunWordsReducer2.class);
-		job2.setNumReduceTasks(4);*/
-
-		System.exit(job.waitForCompletion(true) ? 0 : 1);
+			System.exit(job2.waitForCompletion(true) ? 0 : 1);
+		}
+		System.exit(1);
 	}
 }
